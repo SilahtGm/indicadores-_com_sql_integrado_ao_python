@@ -1,6 +1,10 @@
 # Importando bibliotecas
 import sqlite3 #sqlite para banco de dados
 import os #os para informações do sistema
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
 
 
 
@@ -78,9 +82,9 @@ def criar_conta():
     print("\n======================================")
     print("      CRIAÇÃO DE CONTA")
     print("======================================")
-    nome = input("Digite o seu nome: ")
-    email = input("Digite o seu email: ")
-    senha = input("Digite a sua senha: ")
+    nome = str(input("Digite o seu nome: "))
+    email = str(input("Digite o seu email: "))
+    senha = str(input("Digite a sua senha: "))
 
     try:
         conn = sqlite3.connect('database.db')
@@ -126,10 +130,18 @@ def checar_saldo(usuario):
         cursor.execute(query1, (id_usuario, tipo))
         entrada = cursor.fetchone()
 
+        if entrada[0] is None:
+            print("Você não possui transações de entrada")
+            return
+
         tipo2 = "Saída"
         query2 = "SELECT SUM(valor) FROM transacoes WHERE id_usuario = ? AND tipo = ?"
         cursor.execute(query2,(id_usuario, tipo2))
         saida = cursor.fetchone()
+
+        if saida[0] is None:
+            print("Você não possui transações de saída")
+            return
 
         saldo = entrada[0] - saida[0]
 
@@ -142,6 +154,8 @@ def checar_saldo(usuario):
         conn.close()
 
 
+
+
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
 
@@ -150,6 +164,8 @@ def checar_saldo(usuario):
 
 def registrar_transacao(usuario):
     id_usuario = usuario[0]
+
+    conn = None
 
     try:
         conn = sqlite3.connect('database.db')
@@ -163,6 +179,7 @@ def registrar_transacao(usuario):
             tipo = input("Tipo (1 - ENTRADA / 2 - SAÍDA / 0 - VOLTAR): ")
 
             if tipo == "0":
+                print("Voltando...")
                 break
 
             id_categoria = None
@@ -201,7 +218,7 @@ def registrar_transacao(usuario):
             # Se chegamos aqui, os tipos estão certos
             try:
                 valor = float(input("Valor: R$ "))
-                descricao = input("Descrição: ")
+                descricao = str(input("Descrição: "))
 
                 from datetime import date
                 data_hoje = date.today().isoformat()
@@ -216,17 +233,191 @@ def registrar_transacao(usuario):
                 print("\n[+] Transação registrada com sucesso!")
 
                 # Pergunta se quer continuar
-                continuar = input("\nDeseja registrar outra? (S/N): ").upper()
+                continuar = str(input("\nDeseja registrar outra? (S/N): ")).upper()
                 if continuar != 'S':
                     break
-                conn.close()
 
             except ValueError:
                 print("\n[!] Erro: Use apenas números e ponto para o valor.")
 
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
+    finally:
+        conn.close()
 
+
+
+def exibir_transacoes(usuario):
+    id_usuario = usuario[0]
+
+    conn = None
+
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        query = "SELECT valor, tipo, data, descricao FROM transacoes WHERE id_usuario = ?"
+        cursor.execute(query,(id_usuario,))
+        movimentacoes = cursor.fetchall()
+
+
+        if not movimentacoes:
+            print("\n[!] Você ainda não possui transações cadastradas.")
+        else:
+            contador = 0
+            for m in movimentacoes:
+                print("===================================================")
+                print(f" Valor: R${m[0]} | Tipo: {m[1]} | Data: {m[2]}")
+                print(f" Descrição: {m[3]}")
+                print("===================================================")
+
+                contador += 1  # Aumenta 1 a cada volta
+                if contador >= 10:  # Se já mostrou 10, para aqui
+                    print("... (Existem mais metas, mas estas são as principais)")
+                    break
+
+
+    except sqlite3.Error as e:
+        print(f"\n[!] Erro no Banco de Dados: {e}")
+    finally:
+        conn.close()
+
+
+def criar_metas(usuario):
+   id_usuario = usuario[0]
+
+   conn = None
+
+   try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        while True:
+            objetivo = str(input("Descrição da meta: "))
+            valor_objetivo = float(input("Digite o valor da meta: R$"))
+            prazo = str(input("Digite o prazo (AAAA-MM-DD): "))
+
+            query = ("INSERT INTO metas_economicas (id_usuario, valor_objetivo, objetivo, prazo) VALUES (?, ?, ?, ?)")
+            cursor.execute(query,(id_usuario, valor_objetivo, objetivo, prazo))
+            conn.commit()
+
+            # 3. Verifica se o ID foi gerado (confirmação de sucesso)
+            if cursor.lastrowid:
+                print("\n[+] Meta criada com sucesso!")
+            else:
+                print("\n[!] Ocorreu um erro na criação da sua meta.")
+
+
+            # Pergunta se quer continuar
+            continuar = input("\nDeseja registrar outra? (S/N): ").upper()
+            if continuar != 'S':
+                break
+
+   except sqlite3.Error as e:
+       print(f"\n[!] Erro no Banco de Dados: {e}")
+   finally:
+       conn.close()
+
+
+def exibir_metas(usuario):
+    id_usuario = usuario[0]
+
+    conn = None
+
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        query = "SELECT  objetivo, valor_objetivo, prazo FROM metas_economicas WHERE id_usuario = ?"
+        cursor.execute(query,(id_usuario,))
+        metas = cursor.fetchall()
+
+
+        if not metas:
+            print("\n[!] Você ainda não possui metas cadastradas.")
+        else:
+            contador = 0
+            for m in metas:
+                print("===================================================")
+                print(f" Objetivo: {m[0]} | Valor: R${m[1]} | Prazo: {m[2]}")
+                print("===================================================")
+
+                contador += 1  # Aumenta 1 a cada volta
+                if contador >= 10:  # Se já mostrou 10, para aqui
+                    print("... (Existem mais metas, mas estas são as principais)")
+                    break
+
+
+    except sqlite3.Error as e:
+        print(f"\n[!] Erro no Banco de Dados: {e}")
+    finally:
+        conn.close()
+
+
+def exibir_saude_financeira(usuario):
+    id_usuario = usuario[0]
+
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        tipo = "Entrada"
+        query1 = "SELECT SUM(valor) FROM transacoes WHERE id_usuario = ? AND tipo = ?"
+        cursor.execute(query1, (id_usuario, tipo))
+        entrada = cursor.fetchone()
+
+        if entrada[0] is None:
+            print("Você não possui transações de entrada")
+            return
+
+        tipo2 = "Saída"
+        query2 = "SELECT SUM(valor) FROM transacoes WHERE id_usuario = ? AND tipo = ?"
+        cursor.execute(query2, (id_usuario, tipo2))
+        saida = cursor.fetchone()
+
+        if saida[0] is None:
+            print("Você não possui transações de saída")
+            return
+
+        saldo = entrada[0] - saida[0]
+
+        # Cálculo de Analytics: Eficiência Financeira (Quanto % do que ganho eu guardo?)
+        eficiencia = (saldo / entrada[0] * 100) if entrada[0] > 0 else 0
+
+        print(f"\n=============================")
+        print(f"   DIAGNÓSTICO DE SAÚDE")
+        print(f"=============================")
+        print(f" Total Entradas: R$ {entrada[0]:.2f}")
+        print(f" Total Saídas:   R$ {saida[0]:.2f}")
+        print(f" ---------------------------")
+        print(f" SALDO ATUAL:    R$ {saldo:.2f}")
+        print(f" TAXA DE SOBRA:  {eficiencia:.1f}%")
+        print(f"=============================")
+
+        if eficiencia > 20:
+            print("SITUAÇÃO: [ÓTIMA] - Você está poupando como um profissional!")
+        elif eficiencia > 0:
+            print("SITUAÇÃO: [ALERTA] - Sua margem de segurança é pequena.")
+        else:
+            print("SITUAÇÃO: [CRÍTICA] - Você está gastando mais do que recebe.")
+
+        # Pergunta se quer ver o gráfico (Estilo Analytics)
+        op = input("\nDeseja visualizar o comparativo em gráfico? (S/N): ").upper()
+        if op == 'S':
+            # Usando Pandas para preparar os dados de forma simples
+            df = pd.DataFrame({
+                'Categoria': ['Entradas', 'Saídas'],
+                'Valores': [entrada[0], saida[0]]
+            })
+
+            # Gerando um gráfico de barras simples
+            df.plot(kind='bar', x='Categoria', y='Valores', color=['green', 'red'], legend=False)
+            plt.title("Comparativo: Entradas vs Saídas")
+            plt.ylabel("Valor em R$")
+            plt.xticks(rotation=0)
+            plt.show()
+
+        conn.close()
+    except sqlite3.Error as e:
+        print(f"\n[!] Erro no Banco de Dados: {e}")
 
 
 # Funções Menu
@@ -254,7 +445,7 @@ def menu():
                 encerrando()
             case _:
                 print("\n[!] Opção inválida. Tente novamente.")
-                break
+
 
 
 def menu_pos_login(usuario):
@@ -267,10 +458,9 @@ def menu_pos_login(usuario):
         print(f"       Usuário: {nm_usuario.upper()}")
         print(f"==========================================")
         print(" [1] VISÃO GERAL (Saldo)")
-        print(" [2] REGISTRAR ENTRADA/SAÍDA")
-        print(" [3] RELATÓRIOS E GRÁFICOS (Matplotlib)")
+        print(" [2] TRANSAÇÕES (ENTRADA/SAÍDA)")
+        print(" [3] RELATÓRIOS E GRÁFICOS")
         print(" [4] PLANEJAMENTO (Metas Econômicas)")
-        print(" [5] CONFIGURAÇÕES (Categorias)")
         print(" [0] LOGOUT")
         print("==========================================")
 
@@ -282,7 +472,7 @@ def menu_pos_login(usuario):
 
 
             case "2":
-               registrar_transacao(usuario)
+               menu_transacoes(usuario)
 
 
             case "3":
@@ -290,14 +480,7 @@ def menu_pos_login(usuario):
                 # gerar_grafico_gastos(id_usuario)
                 print("Em desenvolvimento...")
             case "4":
-                # Operações com a tabela 'metas_economicas'
-                # menu_metas(id_usuario)
-                print("Em desenvolvimento...")
-
-            case "5":
-                # O usuário pode querer ver ou adicionar novas categorias
-                # visualizar_categorias()
-                print("Em desenvolvimento...")
+               menu_metas_economicas(usuario)
 
 
             case "0":
@@ -306,6 +489,85 @@ def menu_pos_login(usuario):
 
             case _:
                 print("\n[!] Opção incorreta. Tente novamente.")
+
+def menu_transacoes(usuario):
+
+        nm_usuario = usuario[1]
+        while True:
+            print("============================")
+            print(" SGF - MOVIMENTAÇÕES FINANCEIRAS")
+            print(f" Usuário: {nm_usuario.upper()}")
+            print("============================")
+            print(" [1] EFETUAR ENTRADA/SAÍDA")
+            print(" [2] EXIBIR MOVIMENTAÇÕES EXISTENTES")
+            print(" [0] VOLTAR")
+            print("==========================================")
+            opcao = input("Escolha uma operação: ")
+
+            match opcao:
+                case "1":
+                    registrar_transacao(usuario)
+                case "2":
+                    exibir_transacoes(usuario)
+                case "0":
+                    print("Voltando...")
+                    break
+                case _:
+                    print("\n[!] Opção incorreta. Tente novamente.")
+
+
+
+def menu_metas_economicas(usuario):
+
+    nm_usuario = usuario[1]
+    while True:
+        print("============================")
+        print(" SGF - METAS ECONÔMICAS")
+        print(f" Usuário: {nm_usuario.upper()}")
+        print("============================")
+        print(" [1] LANÇAR NOVA META")
+        print(" [2] EXIBIR METAS EXISTENTES")
+        print(" [0] VOLTAR")
+        print("==========================================")
+        opcao = input("Escolha uma operação: ")
+
+        match opcao:
+            case "1": criar_metas(usuario)
+            case "2": exibir_metas(usuario)
+            case "0":
+                print("Voltando...")
+                break
+            case _:
+                print("\n[!] Opção incorreta. Tente novamente.")
+
+
+def menu_relatorios(usuario):
+    while True:
+        print("=================================")
+        print("    SGF - INSIGHTS FINANCEIROS")
+        print(f"    Analista: {usuario[1].upper()}")
+        print("=================================")
+        print(" [1] DIAGNÓSTICO DE SAÚDE (KPIs)")
+        print(" [2] MAIORES GASTOS (Ranking)")
+        print(" [3] PROGRESSO DAS METAS (Visual)")
+        print(" [0] VOLTAR")
+        print("=" * 30)
+        opcao = input("Escolha o insight desejado: ")
+
+        if opcao == "1":
+            exibir_saude_financeira(usuario)
+        elif opcao == "2":
+            exibir_ranking_gastos(usuario)
+        elif opcao == "3":
+            exibir_progresso_metas(usuario)
+        elif opcao == "0":
+            break
+        else:
+            print("[!] Opção inválida.")
+
+
+# Start do sistema
+menu()
 
 
 # APOIO DE ESTUDOS
@@ -342,4 +604,3 @@ def menu_pos_login(usuario):
 # -> Útil para: Saber se um UPDATE ou DELETE realmente alterou algo no banco.
 # ==============================================================================
 
-menu()

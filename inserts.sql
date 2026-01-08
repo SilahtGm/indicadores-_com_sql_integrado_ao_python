@@ -1,6 +1,6 @@
 -- 1. Inserindo o Usuário Principal
 INSERT INTO usuarios (nm_usuario, email, senha)
-VALUES ('Thalis Silva', 'thalis@email.com', '202020thalis');
+VALUES ('Thalis Sousa', 'thalis@email.com', '202020thalis');
 
 -- 2. Populando as Categorias
 INSERT INTO categorias (nm_categoria, tipo) VALUES ('Alimentação', 'Despesa');
