@@ -5,7 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-
+# --- FUNÇÕES UTILITÁRIAS ---
+def pausar():
+    # ESSA FUNÇÃO SEGURA A TELA PARA VOCÊ LER A MENSAGEM ANTES DE LIMPAR
+    input("\nPRESSIONE [ENTER] PARA CONTINUAR...")
+    print("\n\n\n\n")
 
 
 # Função principal de criação/conexão de banco de dados
@@ -150,6 +154,8 @@ def checar_saldo(usuario):
         print(f"   (Entradas: R$ {entrada} | Saídas: R$ {saida})")
         print(f"=============================")
 
+        pausar()
+
         conn.commit()
         conn.close()
 
@@ -274,6 +280,7 @@ def exibir_transacoes(usuario):
                 if contador >= 10:  # Se já mostrou 10, para aqui
                     print("... (Existem mais metas, mas estas são as principais)")
                     break
+            pausar()
 
 
     except sqlite3.Error as e:
@@ -345,6 +352,8 @@ def exibir_metas(usuario):
                     print("... (Existem mais metas, mas estas são as principais)")
                     break
 
+            pausar()
+
 
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
@@ -379,17 +388,20 @@ def exibir_saude_financeira(usuario):
 
         saldo = entrada[0] - saida[0]
 
-        # Cálculo de Analytics: Eficiência Financeira (Quanto % do que ganho eu guardo?)
-        eficiencia = (saldo / entrada[0] * 100) if entrada[0] > 0 else 0
+        # Cálculo de Eficiência Financeira (Quanto % do que ganho eu guardo?)
+        if entrada[0] > 0:
+            eficiencia = (saldo / entrada[0]) * 100
+        else:
+            eficiencia = 0
 
         print(f"\n=============================")
         print(f"   DIAGNÓSTICO DE SAÚDE")
         print(f"=============================")
-        print(f" Total Entradas: R$ {entrada[0]:.2f}")
-        print(f" Total Saídas:   R$ {saida[0]:.2f}")
+        print(f" Total Entradas: R$ {entrada[0]}")
+        print(f" Total Saídas:   R$ {saida[0]}")
         print(f" ---------------------------")
-        print(f" SALDO ATUAL:    R$ {saldo:.2f}")
-        print(f" TAXA DE SOBRA:  {eficiencia:.1f}%")
+        print(f" SALDO ATUAL:    R$ {saldo}")
+        print(f" TAXA DE SOBRA:  {eficiencia}")
         print(f"=============================")
 
         if eficiencia > 20:
@@ -399,9 +411,13 @@ def exibir_saude_financeira(usuario):
         else:
             print("SITUAÇÃO: [CRÍTICA] - Você está gastando mais do que recebe.")
 
-        # Pergunta se quer ver o gráfico (Estilo Analytics)
+
+        pausar()
+        # Pergunta se quer ver o gráfico
         op = input("\nDeseja visualizar o comparativo em gráfico? (S/N): ").upper()
         if op == 'S':
+
+
             # Usando Pandas para preparar os dados de forma simples
             df = pd.DataFrame({
                 'Categoria': ['Entradas', 'Saídas'],
@@ -415,9 +431,71 @@ def exibir_saude_financeira(usuario):
             plt.xticks(rotation=0)
             plt.show()
 
+        elif op == 'N':
+            print("Vizualização encerrada.")
+
+
         conn.close()
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
+
+
+def exibir_ranking_gastos(usuario):
+    id_usuario = usuario[0]
+
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        # Usamos o Pandas para ler a query direto do banco
+        query = """
+            SELECT t.valor, c.nm_categoria, t.descricao
+            FROM transacoes t
+            JOIN categorias c ON t.id_categoria = c.id_categoria
+            WHERE t.id_usuario = ? AND t.tipo = 'Saída'
+            ORDER BY t.valor DESC
+        """
+        cursor.execute(query, (id_usuario,))
+        ranking = cursor.fetchall()
+        conn.close()
+
+        # Verifica se a lista está vazia
+        if not ranking:
+            print("\n[!] Você ainda não possui transações de saída para gerar um ranking.")
+            return
+
+        print("\n==============================================")
+        print("      TOP 10 MAIORES GASTOS (RANKING)")
+
+
+        if not ranking:
+            print("\n[!] Você ainda não possui transações cadastradas.")
+        else:
+            contador = 0
+            for m in ranking:
+                print("==============================================")
+                print(f" {contador + 1}º - MAIOR GASTO: R${m[0]}")
+                print(f" CATEGORIA: {m[1]}")
+                print(f" MOTIVO/DESC: {m[2]}")
+                print("===================================================")
+
+
+                contador += 1  # Aumenta 1 a cada volta
+                if contador >= 10:  # Se já mostrou 10, para aqui
+                    print("... (Existem mais transações, mas estas são as principais)")
+                    break
+
+            pausar()
+
+
+
+    except Exception as e:
+        print(f"\n[!] Ocorreu um erro: {e}")
+
+
+
+
+
 
 
 # Funções Menu
@@ -443,6 +521,7 @@ def menu():
                 criar_conta()
             case "0":
                 encerrando()
+                break
             case _:
                 print("\n[!] Opção inválida. Tente novamente.")
 
@@ -476,9 +555,7 @@ def menu_pos_login(usuario):
 
 
             case "3":
-                # Aqui entra o Pandas e Matplotlib
-                # gerar_grafico_gastos(id_usuario)
-                print("Em desenvolvimento...")
+                menu_relatorios(usuario)
             case "4":
                menu_metas_economicas(usuario)
 
@@ -549,17 +626,14 @@ def menu_relatorios(usuario):
         print("=================================")
         print(" [1] DIAGNÓSTICO DE SAÚDE (KPIs)")
         print(" [2] MAIORES GASTOS (Ranking)")
-        print(" [3] PROGRESSO DAS METAS (Visual)")
         print(" [0] VOLTAR")
-        print("=" * 30)
+        print("=================================")
         opcao = input("Escolha o insight desejado: ")
 
         if opcao == "1":
             exibir_saude_financeira(usuario)
         elif opcao == "2":
             exibir_ranking_gastos(usuario)
-        elif opcao == "3":
-            exibir_progresso_metas(usuario)
         elif opcao == "0":
             break
         else:
