@@ -38,6 +38,6 @@ O banco de dados `database.db` é composto por quatro tabelas principais:
   
 ## Execute o sistema:
 
-- python main.py
+- main.py
 
 ---
