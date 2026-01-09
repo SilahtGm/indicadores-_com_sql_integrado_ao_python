@@ -30,14 +30,14 @@ O banco de dados `database.db` é composto por quatro tabelas principais:
 3.  **transacoes:** Onde ocorrem os registros de fluxo de caixa.
 4.  **metas_economicas:** Planejamento financeiro de longo prazo.
 
-## Instale as dependências:
+# Instale as dependências:
 
-# Bash
+## Bash
 
 - pip install pandas matplotlib
   
 ## Execute o sistema:
 
-# python main.py
+- python main.py
 
 ---
